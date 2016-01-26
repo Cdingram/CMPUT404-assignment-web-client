@@ -23,6 +23,7 @@ import socket
 import re
 # you may use urllib to encode data appropriately
 import urllib
+from urlparse import urlparse
 
 def help():
     print "httpclient.py [GET/POST] [URL]\n"
@@ -35,20 +36,28 @@ class HTTPResponse(object):
 class HTTPClient(object):
     #def get_host_port(self,url):
 
-    def connect(self, host, port):
+    def connect(self, host, port=80):
         # use sockets!
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        clientSocket.connect((host, port))
-        return None
+        try:   
+            clientSocket.connect((host, port))
+        except socket.error, msg :
+            print "Connection error %s" % msg
+            sys.exit(1)
+
+        return clientSocket
 
     def get_code(self, data):
-        return None
+        data = data.split(' ')
+        code = data[1]
+        return int(code)
 
     def get_headers(self,data):
         return None
 
     def get_body(self, data):
-        return None
+        body = data.split('\r\n\r\n')
+        return body[1]
 
     # read everything from the socket
     def recvall(self, sock):
@@ -63,8 +72,26 @@ class HTTPClient(object):
         return str(buffer)
 
     def GET(self, url, args=None):
-        code = 500
-        body = ""
+        # parse url
+        url = urlparse(url)
+        # connect to the host
+        if url.port != None:
+            clientSocket = self.connect(url.hostname, url.port)
+        else:
+            clientSocket = self.connect(url.hostname)
+        # GET request to send
+        request = "GET {} HTTP/1.1\r\nUser-Agent: Cody's Client\r\nHost: {}\r\nConnection: close\r\nAccept:*/*\r\n\r\n".format(url.path, url.hostname)
+        # send the request over the socket
+        clientSocket.sendall(request)
+        # recieve the response
+        response = self.recvall(clientSocket)
+        # print response for user 
+        print response + '\n'
+        # get response for admin
+        code = self.get_code(response)
+        header = self.get_headers(response)
+        body = self.get_body(response)
+
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
