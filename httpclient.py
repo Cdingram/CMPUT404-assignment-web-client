@@ -37,6 +37,8 @@ class HTTPClient(object):
 
     def connect(self, host, port):
         # use sockets!
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.connect((host, port))
         return None
 
     def get_code(self, data):
@@ -83,6 +85,8 @@ if __name__ == "__main__":
         help()
         sys.exit(1)
     elif (len(sys.argv) == 3):
-        print client.command( sys.argv[1], sys.argv[2] )
+        #user command
+        print client.command( sys.argv[2], sys.argv[1] )
     else:
-        print client.command( command, sys.argv[1] )    
+        #GET
+        print client.command( sys.argv[1] ) 
