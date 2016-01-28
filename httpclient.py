@@ -23,7 +23,6 @@ import socket
 import re
 # you may use urllib to encode data appropriately
 import urllib
-from urlparse import urlparse
 
 def help():
     print "httpclient.py [GET/POST] [URL]\n"
@@ -71,16 +70,40 @@ class HTTPClient(object):
                 done = not part
         return str(buffer)
 
+    def urlparse(self, url):
+        #hostname, path, port
+        if '://' not in url:
+            url = 'http://' + url
+
+        if url.count(':') > 1:
+            url = url.split(':')
+            ':'.join(url[:2]), ':'.join(url[2:])
+            hostname = url[1].replace('/', '')
+            url = url[2].split('/',1)
+            port = url[0]
+            path = '/' + url[1]
+        else:
+            url = url.split('/')
+            '/'.join(url[:3]), '/'.join(url[3:])
+            hostname = url[2]
+            path = '/' + '/'.join(url[3:])
+            if not path:
+                path = '/'
+            port = None
+
+        return port, hostname, path
+
     def GET(self, url, args=None):
         # parse url
-        url = urlparse(url)
+        port, hostname, path = self.urlparse(url)
+        print "Port: " + str(port) + " hostname: " + hostname + " path: " + path
         # connect to the host
-        if url.port != None:
-            clientSocket = self.connect(url.hostname, url.port)
+        if port:
+            clientSocket = self.connect(hostname, int(port))
         else:
-            clientSocket = self.connect(url.hostname)
+            clientSocket = self.connect(hostname)
         # GET request to send
-        request = "GET {} HTTP/1.1\r\nUser-Agent: Cody's Client\r\nHost: {}\r\nConnection: close\r\nAccept:*/*\r\n\r\n".format(url.path, url.hostname)
+        request = "GET {} HTTP/1.1\r\nUser-Agent: Cody's Client\r\nHost: {}\r\nConnection: close\r\nAccept:*/*\r\n\r\n".format(path, hostname)
         # send the request over the socket
         clientSocket.sendall(request)
         # recieve the response
