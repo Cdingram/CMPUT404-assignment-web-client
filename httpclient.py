@@ -52,7 +52,8 @@ class HTTPClient(object):
         return int(code)
 
     def get_headers(self,data):
-        return None
+        data.split('\r\n')
+        return data[1:-2]
 
     def get_body(self, data):
         body = data.split('\r\n\r\n')
@@ -91,6 +92,14 @@ class HTTPClient(object):
                 path = '/'
             port = None
 
+        #encode queries
+        path = path.split('?')
+        for each in range(1,len(path)):
+            path[each] = urllib.quote(path[each])
+        if len(path) > 1:
+            path[0] = path[0] + '?'
+        path = ''.join(path)
+
         return port, hostname, path
 
     def GET(self, url, args=None):
@@ -118,8 +127,34 @@ class HTTPClient(object):
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
-        code = 500
-        body = ""
+        #parse
+        port, hostname, path = self.urlparse(url)
+        print "Port: " + str(port) + " hostname: " + hostname + " path: " + path
+        # connect to the host
+        if port:
+            clientSocket = self.connect(hostname, int(port))
+        else:
+            clientSocket = self.connect(hostname)
+
+        #encode arguements
+        if args != None:
+            query = urllib.urlencode(args)
+            length = len(query)
+        else:
+            query=""
+            length = 0
+
+        request = "POST {} HTTP/1.1\r\nUser-Agent: Cody's Client\r\nHost: {}\r\nAccept:*/*\r\nContent-Length: {}\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\n{}".format(path, hostname, length, query)
+        clientSocket.sendall(request)
+
+        response = self.recvall(clientSocket)
+
+        print response + '\n'
+
+        code = self.get_code(response)
+        header = self.get_headers(response)
+        body = self.get_body(response)
+
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
